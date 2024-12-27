@@ -41,12 +41,15 @@ function formatTideData(tides) {
       type: tide.type === 'H' ? 'High' : 'Low',
     }))
     .sort((a, b) => a.time - b.time) // Sort by time in ascending order
+    .slice(0, 4) // Select only the next 4 tides
     .map(tide => {
       const hours = tide.time.getHours();
       const minutes = tide.time.getMinutes().toString().padStart(2, '0');
       const ampm = hours >= 12 ? 'PM' : 'AM';
-      const formattedTime = `${hours % 12 || 12}:${minutes} ${ampm}`;
-      return `${tide.type}: ${formattedTime} ${tide.value} ft`;
+      const formattedTime = `${hours % 12 || 12}${minutes} ${ampm}`;
+      const label = tide.type.padEnd(5, ' '); // Left-justify Low/High
+      const value = tide.value.padStart(5, ' '); // Right-justify feet
+      return `${label}${formattedTime} ${value} ft`;
     });
 
   return formattedTides;
@@ -62,7 +65,7 @@ async function sendTideMessage() {
 
     console.log('Formatting tide data...');
     const formattedTides = formatTideData(tides);
-    const message = formattedTides.join('\n');
+    const message = formattedTides.join('\n'); // Each tide gets a new line
 
     console.log('Sending tide data to Vestaboard...');
     const result = await vesta.postMessage(message);
