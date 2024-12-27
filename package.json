@@ -5,7 +5,7 @@
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
   "repository": {
-    "url": "https://github.com/mark-thomas/vestaboard-api"
+    "url": "git+https://github.com/mark-thomas/vestaboard-api.git"
   },
   "files": [
     "lib/"
@@ -20,7 +20,7 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^1.6.2",
-    "dotenv": "^16.3.1",
+    "dotenv": "^16.4.7",
     "node-fetch": "^3.3.2",
     "vestaboard-api": "^2.1.5"
   },
@@ -40,5 +40,15 @@
     "prettier": "^2.2.1",
     "ts-jest": "^29.1.1",
     "typescript": "^4.1.3"
-  }
+  },
+  "directories": {
+    "lib": "lib",
+    "test": "tests"
+  },
+  "keywords": [],
+  "types": "./lib/cjs/index.d.ts",
+  "bugs": {
+    "url": "https://github.com/mark-thomas/vestaboard-api/issues"
+  },
+  "homepage": "https://github.com/mark-thomas/vestaboard-api#readme"
 }
