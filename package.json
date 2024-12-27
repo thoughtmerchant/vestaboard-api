@@ -21,6 +21,7 @@
   "dependencies": {
     "axios": "^1.6.2",
     "dotenv": "^16.4.7",
+    "googleapis": "^144.0.0",
     "node-fetch": "^3.3.2",
     "vestaboard-api": "^2.1.5"
   },
