@@ -1,118 +1,97 @@
 import { google } from 'googleapis';
+import { VestaRW } from 'vestaboard-api';
 import dotenv from 'dotenv';
-import fetch from 'node-fetch';
-
 dotenv.config();
 
-const clientId = process.env.GOOGLE_CLIENT_ID;
-const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-const redirectUri = process.env.GOOGLE_REDIRECT_URI;
 const apiKey = process.env.RW_API_KEY;
 
-// Function to list all calendars
-async function listCalendars(oAuth2Client) {
+// Google OAuth Configuration
+const oAuth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI
+);
+
+// Set credentials
+oAuth2Client.setCredentials({
+  access_token: process.env.GOOGLE_ACCESS_TOKEN,
+  refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+});
+
+// Fetch the next 4 events from Google Calendar
+async function fetchUpcomingMeetings() {
   const calendar = google.calendar({ version: 'v3', auth: oAuth2Client });
-  const { data } = await calendar.calendarList.list();
-  console.log('Available calendars:', data.items.map(cal => `${cal.summary} (${cal.id})`));
-  return data.items;
-}
 
-// Function to get upcoming events from a specific calendar
-async function getUpcomingEvents(calendarId = 'primary') {
   try {
-    const { client_id, client_secret, redirect_uris } = JSON.parse(process.env.GOOGLE_CREDENTIALS).installed;
-    const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
-
-    // Set tokens from environment variable
-    const tokens = process.env.GOOGLE_TOKEN ? JSON.parse(process.env.GOOGLE_TOKEN) : null;
-    if (!tokens) {
-      throw new Error('Google tokens are missing. Please authenticate first.');
-    }
-    oAuth2Client.setCredentials(tokens);
-
-    const calendar = google.calendar({ version: 'v3', auth: oAuth2Client });
-
-    // Fetch the next 4 events
     const { data } = await calendar.events.list({
-      calendarId,
-      timeMin: new Date().toISOString(),
-      maxResults: 4,
-      singleEvents: true,
-      orderBy: 'startTime',
+      calendarId: 'primary', // Use the 'primary' calendar
+      timeMin: new Date().toISOString(), // Start from the current time
+      maxResults: 4, // Limit to the next 4 events
+      singleEvents: true, // Expand recurring events into single instances
+      orderBy: 'startTime', // Order by start time
     });
 
-    const events = data.items.map(event => {
+    return data.items.map(event => {
       const start = event.start.dateTime || event.start.date;
-      const time = new Date(start).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-      return `${time} - ${event.summary || 'No Title'}`;
+      const formattedStart = new Date(start).toLocaleString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+      return `${formattedStart} - ${event.summary || 'No Title'}`;
     });
-
-    console.log('Upcoming events:', events);
-    return events.length > 0 ? events : ['No upcoming events'];
   } catch (error) {
-    console.error('Error fetching Google Calendar events:', error.message);
+    console.error('Error fetching meetings:', error.message);
     throw error;
   }
 }
 
-// Function to send events to Vestaboard
+// Format the meetings for Vestaboard
+function formatMeetingsForVestaboard(meetings) {
+  const characters = Array(6)
+    .fill(null)
+    .map(() => Array(22).fill(0)); // Initialize a 6x22 grid with blanks
+
+  meetings.forEach((meeting, index) => {
+    if (index < 6) {
+      const line = meeting.padEnd(22).slice(0, 22); // Ensure each line fits 22 characters
+      line.split('').forEach((char, colIndex) => {
+        if (colIndex < 22) {
+          if (char >= 'A' && char <= 'Z') characters[index][colIndex] = char.charCodeAt(0) - 64; // A-Z
+          else if (char >= '0' && char <= '9') characters[index][colIndex] = char.charCodeAt(0) - 21; // 0-9
+          else if (char === ' ') characters[index][colIndex] = 0; // Space
+          else characters[index][colIndex] = 0; // Fallback to blank
+        }
+      });
+    }
+  });
+
+  return characters;
+}
+
+// Send the meetings to Vestaboard
 async function sendMeetingsToVestaboard() {
+  const vesta = new VestaRW({ apiReadWriteKey: apiKey });
+
   try {
-    const { client_id, client_secret, redirect_uris } = JSON.parse(process.env.GOOGLE_CREDENTIALS).installed;
-    const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+    console.log('Fetching upcoming meetings...');
+    const meetings = await fetchUpcomingMeetings();
 
-    // Set tokens from environment variable
-    const tokens = process.env.GOOGLE_TOKEN ? JSON.parse(process.env.GOOGLE_TOKEN) : null;
-    if (!tokens) {
-      throw new Error('Google tokens are missing. Please authenticate first.');
-    }
-    oAuth2Client.setCredentials(tokens);
-
-    // List calendars and prompt user to select one
-    const calendars = await listCalendars(oAuth2Client);
-    const selectedCalendar = calendars.find(cal => cal.summary === 'Your Calendar Name'); // Replace with actual calendar name
-    const calendarId = selectedCalendar ? selectedCalendar.id : 'primary';
-
-    const events = await getUpcomingEvents(calendarId);
-    const formattedEvents = events.map((event, index) => `${index + 1}. ${event}`).join('\n');
-
-    // Convert to Vestaboard character codes
-    const characters = Array(6)
-      .fill(null)
-      .map(() => Array(22).fill(0)); // Initialize 6x22 grid with blanks
-
-    formattedEvents.split('\n').forEach((line, rowIndex) => {
-      if (rowIndex < 6) {
-        line.split('').forEach((char, colIndex) => {
-          if (colIndex < 22) {
-            if (char >= 'A' && char <= 'Z') characters[rowIndex][colIndex] = char.charCodeAt(0) - 64; // A-Z
-            else if (char >= '0' && char <= '9') characters[rowIndex][colIndex] = char.charCodeAt(0) - 21; // 0-9
-            else if (char === ' ') characters[rowIndex][colIndex] = 0; // Space
-            else characters[rowIndex][colIndex] = 0; // Fallback to blank
-          }
-        });
-      }
-    });
-
-    console.log('Prepared Vestaboard payload:', characters);
-
-    const response = await fetch('https://rw.vestaboard.com/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Vestaboard-Read-Write-Key': apiKey,
-      },
-      body: JSON.stringify({ characters }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Vestaboard API Error: ${response.statusText}`);
+    if (meetings.length === 0) {
+      console.log('No upcoming meetings found.');
+      return;
     }
 
-    console.log('Meetings successfully sent to Vestaboard');
+    console.log('Formatting meetings for Vestaboard...');
+    const payload = formatMeetingsForVestaboard(meetings);
+
+    console.log('Sending meetings to Vestaboard...');
+    const result = await vesta.postMessage({ characters: payload });
+    console.log('Meetings successfully sent to Vestaboard:', result);
   } catch (error) {
     console.error('Error sending meetings to Vestaboard:', error.message);
   }
 }
 
+// Execute the script
 sendMeetingsToVestaboard();
