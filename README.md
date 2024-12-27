@@ -55,7 +55,7 @@ or just go directly
 
 ```
 import { VestaRW } from 'vestaboard-api'
-const vesta = new VestaRW({ apiReadWriteKey: 'Your_RW_API_KEY' });
+const vesta = new VestaRW({ apiReadWriteKey: '1f1533de+c20b+4515+b5d1+0c516d439ab2' });
 
 ```
 
