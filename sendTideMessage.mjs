@@ -32,13 +32,13 @@ async function fetchTideData() {
   return data.predictions;
 }
 
-// Format Tide Data
+// Format Tide Data for Vestaboard
 function formatTideData(tides) {
   const formattedTides = tides
     .map(tide => ({
       time: new Date(tide.t),
       value: parseFloat(tide.v).toFixed(1),
-      type: tide.type === 'H' ? 'High' : 'Low',
+      type: tide.type === 'H' ? 'HIGH' : 'LOW',
     }))
     .sort((a, b) => a.time - b.time) // Sort by time in ascending order
     .slice(0, 4) // Select only the next 4 tides
@@ -46,10 +46,14 @@ function formatTideData(tides) {
       const hours = tide.time.getHours();
       const minutes = tide.time.getMinutes().toString().padStart(2, '0');
       const ampm = hours >= 12 ? 'PM' : 'AM';
-      const formattedTime = `${hours % 12 || 12}${minutes} ${ampm}`;
-      const label = tide.type.padEnd(5, ' '); // Left-justify Low/High
-      const value = tide.value.padStart(5, ' '); // Right-justify feet
-      return `${label}${formattedTime} ${value} ft`;
+
+      // Format components
+      const label = tide.type.padEnd(6, ' '); // "LOW" or "HIGH" left-aligned
+      const formattedTime = `${(hours % 12 || 12).toString().padStart(2, ' ')}:${minutes} ${ampm}`;
+      const value = tide.value.padStart(5, ' ') + ' FT'; // Right-justify tide height with "FT"
+
+      // Assemble the line
+      return `${label}${formattedTime.padEnd(8, ' ')}${value}`;
     });
 
   return formattedTides;
