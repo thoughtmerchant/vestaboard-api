@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     const output = formattedTides.join('\n');
 
     // Write the file in the current directory
-    const filePath = path.join(process.cwd(), 'tideData.txt');
+    const filePath = path.join('/tmp', 'tideData.txt');
     fs.writeFileSync(filePath, output, 'utf8');
 
     res.status(200).send('Tide data written successfully');
