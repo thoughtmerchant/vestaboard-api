@@ -50,7 +50,7 @@ function formatWaveData(waveData) {
     const directionIndex = Math.round(waveData.swellDirection / 22.5) % 16; // Convert angle to direction
     const direction = directions[directionIndex];
   
-    return `Wave Height\n${waveData.waveHeight.toFixed(1)}ft @${waveData.dominantPeriod.toFixed(1)}s ${direction}`;
+    return `${waveData.waveHeight.toFixed(1)}ft @${waveData.dominantPeriod.toFixed(1)}s ${direction}`;
   }
 
 // Send Wave Data to Vestaboard
