@@ -6,7 +6,7 @@ dotenv.config();
 
 const apiKey = process.env.RW_API_KEY;
 
-// NOAA API URL for Observations
+// NOAA API URL for Water Temperature
 const NOAA_OBSERVATIONS_URL = 'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter';
 const NOAA_PARAMS = {
   product: 'water_temperature',
@@ -15,12 +15,16 @@ const NOAA_PARAMS = {
   time_zone: 'lst_ldt',
   units: 'english',
   format: 'json',
+  date: 'latest', // Fetch the most recent data point
 };
 
-// Fetch Current Water Temperature Data
+// Fetch Latest Water Temperature Data
 async function fetchWaterTempData() {
   const params = new URLSearchParams(NOAA_PARAMS).toString();
-  const response = await fetch(`${NOAA_OBSERVATIONS_URL}?${params}`);
+  const requestUrl = `${NOAA_OBSERVATIONS_URL}?${params}`;
+  console.log(`Request URL: ${requestUrl}`);
+
+  const response = await fetch(requestUrl);
   if (!response.ok) {
     throw new Error(`Failed to fetch water temperature data: ${response.statusText}`);
   }
@@ -32,8 +36,7 @@ async function fetchWaterTempData() {
     throw new Error('No water temperature data available.');
   }
 
-  // Return the latest water temperature reading
-  return data.data[data.data.length - 1];
+  return data.data[0]; // Return the latest entry
 }
 
 // Format Water Temperature Data for Vestaboard
