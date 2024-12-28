@@ -24,11 +24,11 @@ async function fetchUpcomingMeetings() {
 
   try {
     const { data } = await calendar.events.list({
-      calendarId: 'primary', // Use the 'primary' calendar
-      timeMin: new Date().toISOString(), // Start from the current time
-      maxResults: 4, // Limit to the next 4 events
-      singleEvents: true, // Expand recurring events into single instances
-      orderBy: 'startTime', // Order by start time
+      calendarId: 'primary',
+      timeMin: new Date().toISOString(),
+      maxResults: 4,
+      singleEvents: true,
+      orderBy: 'startTime',
     });
 
     return data.items.map(event => {
@@ -46,52 +46,59 @@ async function fetchUpcomingMeetings() {
   }
 }
 
-// Format the meetings for Vestaboard
-function formatMeetingsForVestaboard(meetings) {
-  const characters = Array(6)
-    .fill(null)
-    .map(() => Array(22).fill(0)); // Initialize a 6x22 grid with blanks
-
-  meetings.forEach((meeting, index) => {
-    if (index < 6) {
-      const line = meeting.padEnd(22).slice(0, 22); // Ensure each line fits 22 characters
-      line.split('').forEach((char, colIndex) => {
-        if (colIndex < 22) {
-          if (char >= 'A' && char <= 'Z') characters[index][colIndex] = char.charCodeAt(0) - 64; // A-Z
-          else if (char >= '0' && char <= '9') characters[index][colIndex] = char.charCodeAt(0) - 21; // 0-9
-          else if (char === ' ') characters[index][colIndex] = 0; // Space
-          else characters[index][colIndex] = 0; // Fallback to blank
-        }
+// Format Meeting Data for Vestaboard
+function formatMeetingData(meetings) {
+    const formattedMeetings = meetings
+      .map(meeting => ({
+        time: new Date(meeting.start), // Assume `meeting.start` is a valid date string
+        summary: meeting.summary || 'No Title', // Default to "No Title" if summary is missing
+      }))
+      .sort((a, b) => a.time - b.time) // Sort by time in ascending order
+      .slice(0, 4) // Select only the next 4 meetings
+      .map(meeting => {
+        const hours = meeting.time.getHours();
+        const minutes = meeting.time.getMinutes().toString().padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+  
+        // Format components
+        const timeLabel = `${(hours % 12 || 12).toString().padStart(2, ' ')}:${minutes} ${ampm}`;
+        let summaryLabel = meeting.summary.slice(0, 16); // Truncate the summary if it's too long
+  
+        // Ensure the total length is <= 22
+        const maxSpacerLength = 22 - timeLabel.length - summaryLabel.length;
+        const spacer = ' '.repeat(Math.max(0, maxSpacerLength)); // Ensure spacer length is non-negative
+  
+        // Assemble the line
+        return `${timeLabel}${spacer}${summaryLabel}`;
       });
-    }
-  });
-
-  return characters;
-}
+  
+    return formattedMeetings;
+  }
 
 // Send the meetings to Vestaboard
 async function sendMeetingsToVestaboard() {
-  const vesta = new VestaRW({ apiReadWriteKey: apiKey });
-
-  try {
-    console.log('Fetching upcoming meetings...');
-    const meetings = await fetchUpcomingMeetings();
-
-    if (meetings.length === 0) {
-      console.log('No upcoming meetings found.');
-      return;
+    const vesta = new VestaRW({ apiReadWriteKey: apiKey });
+  
+    try {
+      console.log('Fetching upcoming meetings...');
+      const meetings = await fetchUpcomingMeetings(); // Fetch meetings from Google Calendar API
+  
+      if (meetings.length === 0) {
+        console.log('No upcoming meetings found.');
+        return;
+      }
+  
+      console.log('Formatting meetings for Vestaboard...');
+      const formattedMeetings = formatMeetingData(meetings);
+      const message = formattedMeetings.join('\n'); // Join formatted lines into a single message
+  
+      console.log('Sending meeting data to Vestaboard...');
+      const result = await vesta.postMessage(message);
+      console.log('Message sent successfully:', result);
+    } catch (error) {
+      console.error('Error sending meeting message:', error.message);
     }
-
-    console.log('Formatting meetings for Vestaboard...');
-    const payload = formatMeetingsForVestaboard(meetings);
-
-    console.log('Sending meetings to Vestaboard...');
-    const result = await vesta.postMessage({ characters: payload });
-    console.log('Meetings successfully sent to Vestaboard:', result);
-  } catch (error) {
-    console.error('Error sending meetings to Vestaboard:', error.message);
   }
-}
 
 // Execute the script
 sendMeetingsToVestaboard();
