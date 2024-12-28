@@ -1,0 +1,4 @@
+LOW   12:23 AM  2.5 FT
+HIGH   6:55 AM  5.8 FT
+LOW    2:24 PM -0.6 FT
+HIGH   8:59 PM  3.4 FT
