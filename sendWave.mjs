@@ -42,7 +42,7 @@ async function fetchWaveData() {
 
 // Format Wave Data for Vestaboard
 function formatWaveData(waveData) {
-  return `Wave Height\n${waveData.waveHeight.toFixed(1)} ft\nPeriod: ${waveData.dominantPeriod}s`;
+  return `Wave Height\n${waveData.waveHeight.toFixed(1)}ft @${waveData.dominantPeriod.toFixed(1)}s`;
 }
 
 // Send Wave Data to Vestaboard
