@@ -26,26 +26,30 @@ async function fetchUpcomingEvents() {
   try {
     const { data } = await calendar.events.list({
       calendarId: 'primary',
-      timeMin: new Date().toISOString(),
-      maxResults: 4,
-      singleEvents: true,
-      orderBy: 'startTime',
+      timeMin: new Date().toISOString(), // Current time
+      maxResults: 10, // Fetch more events to account for filtering
+      singleEvents: true, // Expand recurring events into individual instances
+      orderBy: 'startTime', // Sort by start time
     });
 
-    const events = data.items.map(event => {
-      const start = event.start.dateTime || event.start.date;
-      const formattedTime = new Date(start).toLocaleString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
+    // Filter out all-day events or events without a specific time
+    const events = data.items
+      .filter(event => event.start.dateTime) // Include only events with explicit time
+      .slice(0, 4) // Limit to the next 4 valid events
+      .map(event => {
+        const start = event.start.dateTime;
+        const formattedTime = new Date(start).toLocaleString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        });
+        const truncatedName = (event.summary || 'No Title').slice(0, 12);
+
+        return `${formattedTime.padEnd(8)} ${truncatedName.padEnd(12)}`;
       });
-      const truncatedName = (event.summary || 'No Title').slice(0, 12);
 
-      return `${formattedTime.padEnd(8)} ${truncatedName.padEnd(12)}`;
-    });
-
-    console.log('Formatted Events for Vestaboard:', events);
-    return events;
+    console.log('Filtered and Formatted Events for Vestaboard:', events);
+    return events.length > 0 ? events : ['No meetings scheduled.'];
   } catch (error) {
     console.error('Error fetching events:', error.message);
     throw error;
@@ -74,11 +78,6 @@ async function sendToVestaboard(events) {
   try {
     console.log('Fetching upcoming events...');
     const events = await fetchUpcomingEvents();
-
-    if (events.length === 0) {
-      console.log('No upcoming events found.');
-      return;
-    }
 
     console.log('Sending events to Vestaboard...');
     await sendToVestaboard(events);
