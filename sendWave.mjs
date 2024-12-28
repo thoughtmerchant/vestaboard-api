@@ -9,7 +9,7 @@ const apiKey = process.env.RW_API_KEY;
 // NOAA Buoy Data URL
 const BUOY_DATA_URL = 'https://www.ndbc.noaa.gov/data/5day2/46221_5day.spec';
 
-// Fetch Wave Height and Period Data
+// Fetch Wave Height, Period, and Swell Direction Data
 async function fetchWaveData() {
   console.log(`Fetching buoy data from: ${BUOY_DATA_URL}`);
 
@@ -31,19 +31,27 @@ async function fetchWaveData() {
 
   // Extract the latest data
   const latest = data[data.length - 1];
-  const [year, month, day, hour, minute, waveHeight, dominantPeriod] = latest;
+  const [year, month, day, hour, minute, waveHeight, dominantPeriod, swellDirection] = latest;
 
   return {
     waveHeight: parseFloat(waveHeight),
     dominantPeriod: parseFloat(dominantPeriod),
+    swellDirection: parseFloat(swellDirection), // Convert to float for processing
     timestamp: `${month}/${day}/${year} ${hour}:${minute}`,
   };
 }
 
 // Format Wave Data for Vestaboard
+// Format Wave Data for Vestaboard
 function formatWaveData(waveData) {
-  return `Wave Height\n${waveData.waveHeight.toFixed(1)}ft @${waveData.dominantPeriod.toFixed(1)}s`;
-}
+    const directions = [
+      'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW',
+    ];
+    const directionIndex = Math.round(waveData.swellDirection / 22.5) % 16; // Convert angle to direction
+    const direction = directions[directionIndex];
+  
+    return `Wave Height\n${waveData.waveHeight.toFixed(1)}ft @${waveData.dominantPeriod.toFixed(1)}s ${direction}`;
+  }
 
 // Send Wave Data to Vestaboard
 async function sendWaveMessage() {
