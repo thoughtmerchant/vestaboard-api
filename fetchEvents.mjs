@@ -27,15 +27,15 @@ async function fetchUpcomingEvents() {
     const { data } = await calendar.events.list({
       calendarId: 'primary',
       timeMin: new Date().toISOString(), // Current time
+      timeMax: new Date(new Date().setHours(23, 59, 59, 999)).toISOString(), // End of today
       maxResults: 10, // Fetch more events to account for filtering
       singleEvents: true, // Expand recurring events into individual instances
       orderBy: 'startTime', // Sort by start time
     });
 
-    // Filter out all-day events or events without a specific time
+    // Filter out all-day events (no `dateTime`) or events without a specific time
     const events = data.items
-      .filter(event => event.start.dateTime) // Include only events with explicit time
-      .slice(0, 4) // Limit to the next 4 valid events
+      .filter(event => event.start.dateTime) // Exclude events without `start.dateTime`
       .map(event => {
         const start = event.start.dateTime;
         const formattedTime = new Date(start).toLocaleString('en-US', {
@@ -49,7 +49,9 @@ async function fetchUpcomingEvents() {
       });
 
     console.log('Filtered and Formatted Events for Vestaboard:', events);
-    return events.length > 0 ? events : ['No meetings scheduled.'];
+
+    // Return "No meetings" if no events are scheduled for today
+    return events.length > 0 ? events : ['No meetings'];
   } catch (error) {
     console.error('Error fetching events:', error.message);
     throw error;
