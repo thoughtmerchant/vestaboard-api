@@ -47,13 +47,13 @@ function formatTideData(tides) {
       const minutes = tide.time.getMinutes().toString().padStart(2, '0');
       const ampm = hours >= 12 ? 'PM' : 'AM';
 
-      // Format components
-      const label = tide.type.padEnd(6, ' '); // "LOW" or "HIGH" left-aligned
-      const formattedTime = `${(hours % 12 || 12).toString().padStart(2, ' ')}:${minutes} ${ampm}`;
-      const value = tide.value.padStart(5, ' ') + ' FT'; // Right-justify tide height with "FT"
+      // Format components with minimal spacing
+      const label = tide.type; // "LOW" or "HIGH"
+      const formattedTime = `${(hours % 12 || 12)}:${minutes} ${ampm}`;
+      const value = tide.value; // Tide height without "FT"
 
-      // Assemble the line
-      return `${label}${formattedTime.padEnd(8, ' ')}${value}`;
+      // Assemble the line with consistent spacing, no leading space
+      return `${label}${formattedTime} ${value}`;
     });
 
   return formattedTides;
